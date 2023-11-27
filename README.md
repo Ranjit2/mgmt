@@ -1,4 +1,6 @@
 # Laravel Project README
+<img src="https://github.com/Ranjit2/mgmt/blob/main/Screen%20Shot%202023-11-27%20at%2010.33.14%20pm.png">
+<img src="https://github.com/Ranjit2/mgmt/blob/main/Screen%20Shot%202023-11-28%20at%2010.32.55%20am.png">
 
 ## Prerequisites
 
