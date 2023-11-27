@@ -4,11 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Repositories\TaskRepository;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    const PER_PAGE = 5;
+    private $taskRepository;
+    private $user;
+    private $task;
+
+    public function __construct(TaskRepository $taskRepository, User $user, Task $task)
+    {
+        $this->taskRepository = $taskRepository;
+        $this->task = $task;
+        $this->user = $user;
+    }
 
     /**
      * Retrieve and display a paginated list of tasks.
@@ -17,7 +27,7 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $tasks = Task::latest()->paginate(self::PER_PAGE);
+        $tasks = $this->taskRepository->getTaskPerPage();
 
         return view('task.index', compact('tasks'));
     }
@@ -40,10 +50,9 @@ class TaskController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
-    {
-        $this->validate($request, ['title' => 'required|min:5|max:100', 'description' => 'required|min:20|max:5000']);
-
-        Task::create(['title' => $request->title, 'description' => $request->description]);
+    {        
+        $this->validateTask($request);
+        $this->taskRepository->storeTask($request);
 
         return redirect()->route('tasks.index')->with('message', 'Task created successfully');
     }
@@ -66,11 +75,10 @@ class TaskController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $this->validate($request, ['title' => 'required|min:5|max:100', 'description' => 'required|min:20|max:5000']);
-
-        Task::find($id)->update(['title' => $request->title, 'description' => $request->description]);
+        $this->validateTask($request);
+        $this->taskRepository->updateTask($request, $id);
 
         return redirect()->route('tasks.index')->with('message', 'Task update successfully');
     }
@@ -92,10 +100,9 @@ class TaskController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request, int $id)
     {
-        Task::find($request->id)->delete();
-
+        $this->taskRepository->removeTask($id);
         return redirect()->route('tasks.index')->with('message', 'Task deleted successfully');
     }
 
@@ -107,10 +114,8 @@ class TaskController extends Controller
      */
     public function status(Task $taskStatus)
     {
-        $task = Task::find($taskStatus->id);
-        $task->update(['status' => !$taskStatus->status]);
-
-        return redirect()->route('tasks.index')->with('message', $task->status == 1 ? 'Task marked as completed' : 'Task marked as incomplete');
+        $this->taskRepository->taskStatus($taskStatus);
+        return redirect()->route('tasks.index')->with('message', $taskStatus->status == 1 ? 'Task marked as completed' : 'Task marked as incomplete');
     }
 
     /**
@@ -121,8 +126,8 @@ class TaskController extends Controller
      */
     public function assign(Task $task)
     {
-        $users = User::all();
-        $tasks = Task::where('status', false)->get();
+        $users = $this->user->all();
+        $tasks = $this->task->where('status', false)->get();
 
         return view('task.assign', compact('tasks', 'users'));
     }
@@ -135,20 +140,17 @@ class TaskController extends Controller
      */
     public function assignToUser(Request $request)
     {
-        $user = User::find($request->user);
-        $task = Task::find($request->task);
-
-        if ($user && $task) {
-            $taskAlreadyAssinged = Task::where(['id' => $task->id, 'user_assign_id' => $user->id]);
-            //if task is already assinged to someone, remove it from that user and assign it to different user
-            if ($taskAlreadyAssinged->exists()) {
-                $task->update(['user_assign_id' => false]);
-            }
-
-            $task->update(['user_assign_id' => $user->id]);
+        $assing = $this->taskRepository->assignToUser($request);
+        $task = $this->task->find($request->task);
+        $user = $this->user->find($request->user);
+        if ($assing) {
             return redirect()->route('tasks.assign')->with('message', $task->title . 'has been assigned to:' . $user->name);
         }
-
         return back()->with('message', 'Error while assigning');
+    }
+
+    public function validateTask($request)
+    {
+        return $this->validate($request, ['title' => 'required|min:5|max:100', 'description' => 'required|min:20|max:5000']);
     }
 }

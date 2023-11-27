@@ -24,6 +24,13 @@
 
 - Duplicate the .env.example file and rename it to .env.
 - Configure your database connection and other necessary settings in the .env file.
+# change .env file db setup 
+- DB_CONNECTION=mysql
+- DB_HOST=127.0.0.1
+- DB_PORT=3306
+- DB_DATABASE=your_database_name
+- DB_USERNAME=your_username
+- DB_PASSWORD=your_password
 
 **Generate Application Key:**
 
